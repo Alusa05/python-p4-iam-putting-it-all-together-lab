@@ -15,9 +15,41 @@ class User(db.Model, SerializerMixin):
 
     recipes = db.relationship("Recipe", backref="user", lazy=True)
 
+    serialize_rules = ('-recipes.user',)
+
+    @hybrid_property
+    def password_hash(self):
+        return AttributeError("Password hases may not be viewed")
     
+    @password_hash.setter
+    def password_hash(self, password):
+        self._password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    def authenticate(self, password):
+        return bcrypt.check_password_hash(self._password_hash, password)
+    
+    @validates('username')
+    def validate_username(self, key, username):
+        if not value:
+            raise ValueError("Username cannot be empty")
+        return Value
+
 
 class Recipe(db.Model, SerializerMixin):
     __tablename__ = 'recipes'
     
-    pass
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String, nullable=False)
+    instructions = db.Column(db.String, nullable=False)
+    minutes_to_complete = db.Column(db.Integer)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    serialize_rules = ('-user.recipes',)
+
+    @validates('title', 'instructions')
+    def validate_fields(self, key, value):
+        if not value:
+            raise ValueError(f"{key.capitalize()} is required.")
+        if key == 'instructions' and len(value) < 50:
+            raise ValueError("Instructions must be at least 50 characters long.")
+        return value
